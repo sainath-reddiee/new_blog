@@ -1,12 +1,40 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { Calendar, Clock, ArrowRight, Star } from 'lucide-react';
+import { Calendar, Clock, ArrowRight, Star, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { allArticles } from '@/data/articles';
+import { usePosts } from '@/hooks/useWordPress';
 
 const FeaturedPosts = () => {
-  const featuredPosts = allArticles.filter(p => p.featured).sort((a, b) => new Date(b.date) - new Date(a.date));
+  const { posts: featuredPosts, loading, error } = usePosts({ 
+    featured: true, 
+    per_page: 3 
+  });
+
+  if (loading) {
+    return (
+      <section className="py-20 relative">
+        <div className="container mx-auto px-6">
+          <div className="flex items-center justify-center py-20">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-400"></div>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  if (error) {
+    return (
+      <section className="py-20 relative">
+        <div className="container mx-auto px-6">
+          <div className="flex items-center justify-center py-20 text-red-400">
+            <AlertCircle className="h-6 w-6 mr-2" />
+            <span>Error loading featured posts: {error}</span>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   if (featuredPosts.length === 0) {
     return null;
@@ -47,7 +75,11 @@ const FeaturedPosts = () => {
                 <img 
                   className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                   alt={featuredPosts[0].title}
-                  src={featuredPosts[0].image} />
+                  src={featuredPosts[0].image} 
+                  onError={(e) => {
+                    e.target.src = 'https://images.unsplash.com/photo-1595872018818-97555653a011';
+                  }}
+                />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
                 <div className="absolute top-4 left-4">
                   <span className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-4 py-2 rounded-full text-sm font-semibold">
@@ -94,7 +126,11 @@ const FeaturedPosts = () => {
                       <img 
                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                         alt={post.title}
-                        src={post.image} />
+                        src={post.image}
+                        onError={(e) => {
+                          e.target.src = 'https://images.unsplash.com/photo-1595872018818-97555653a011';
+                        }}
+                      />
                     </div>
                     <div className="p-6 flex-1">
                       <div className="mb-2">
