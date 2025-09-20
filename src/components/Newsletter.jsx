@@ -3,18 +3,21 @@ import { motion } from 'framer-motion';
 import { Mail, Send, CheckCircle, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
+import { useNewsletter } from '@/hooks/useWordPress';
 
 const Newsletter = () => {
   const [email, setEmail] = useState('');
   const [isSubscribed, setIsSubscribed] = useState(false);
+  const { subscribe, loading, error } = useNewsletter();
   const { toast } = useToast();
 
   const isValidEmail = (email) => {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    
     if (!email) {
       toast({
         title: "Email Required",
@@ -34,36 +37,60 @@ const Newsletter = () => {
     }
 
     try {
-      const subscriptions = JSON.parse(localStorage.getItem('newsletterSubscriptions')) || [];
-      if (subscriptions.includes(email)) {
-        toast({
-          title: "Already Subscribed",
-          description: "This email address is already on our list!",
-        });
-        return;
-      }
-
-      subscriptions.push(email);
-      localStorage.setItem('newsletterSubscriptions', JSON.stringify(subscriptions));
-
-      setIsSubscribed(true);
-      toast({
-        title: "🎉 Successfully Subscribed!",
-        description: "Welcome to DataEngineer Hub! You'll receive our latest articles and insights.",
-      });
+      const result = await subscribe(email);
       
-      setTimeout(() => {
-        setIsSubscribed(false);
-        setEmail('');
-      }, 3000);
+      if (result.success) {
+        setIsSubscribed(true);
+        toast({
+          title: "🎉 Successfully Subscribed!",
+          description: "Welcome to DataEngineer Hub! You'll receive our latest articles and insights.",
+        });
+        
+        setTimeout(() => {
+          setIsSubscribed(false);
+          setEmail('');
+        }, 3000);
+      } else {
+        toast({
+          title: "Subscription Failed",
+          description: result.error || "Could not subscribe. Please try again.",
+          variant: "destructive"
+        });
+      }
+    } catch (err) {
+      // Fallback to local storage for development/demo
+      try {
+        const subscriptions = JSON.parse(localStorage.getItem('newsletterSubscriptions') || '[]');
+        if (subscriptions.includes(email)) {
+          toast({
+            title: "Already Subscribed",
+            description: "This email address is already on our list!",
+          });
+          return;
+        }
 
-    } catch (error) {
-      console.error("Failed to save subscription to localStorage:", error);
-      toast({
-        title: "Subscription Failed",
-        description: "Could not save your subscription. Please try again.",
-        variant: "destructive"
-      });
+        subscriptions.push(email);
+        localStorage.setItem('newsletterSubscriptions', JSON.stringify(subscriptions));
+
+        setIsSubscribed(true);
+        toast({
+          title: "🎉 Successfully Subscribed!",
+          description: "Welcome to DataEngineer Hub! You'll receive our latest articles and insights.",
+        });
+        
+        setTimeout(() => {
+          setIsSubscribed(false);
+          setEmail('');
+        }, 3000);
+
+      } catch (localError) {
+        console.error("Failed to save subscription:", localError);
+        toast({
+          title: "Subscription Failed",
+          description: "Could not save your subscription. Please try again.",
+          variant: "destructive"
+        });
+      }
     }
   };
 
@@ -129,7 +156,7 @@ const Newsletter = () => {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="Enter your email address"
                   className="w-full px-6 py-4 bg-white/10 border border-white/20 rounded-full text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-sm"
-                  disabled={isSubscribed}
+                  disabled={isSubscribed || loading}
                 />
                 {isSubscribed && (
                   <motion.div
@@ -144,14 +171,19 @@ const Newsletter = () => {
               <Button
                 type="submit"
                 size="lg"
-                disabled={isSubscribed}
+                disabled={isSubscribed || loading}
                 className={`px-8 py-4 rounded-full font-bold transition-all duration-300 ${
                   isSubscribed 
                     ? 'bg-green-500 hover:bg-green-600' 
                     : 'bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700'
                 } text-white group`}
               >
-                {isSubscribed ? (
+                {loading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                    Subscribing...
+                  </>
+                ) : isSubscribed ? (
                   <>
                     <CheckCircle className="mr-2 h-5 w-5" />
                     Subscribed!
@@ -164,6 +196,16 @@ const Newsletter = () => {
                 )}
               </Button>
             </motion.form>
+
+            {error && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="text-red-400 text-sm mb-4"
+              >
+                Error: {error}
+              </motion.div>
+            )}
 
             <motion.div
               initial={{ opacity: 0 }}
