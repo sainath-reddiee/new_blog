@@ -6,6 +6,12 @@ function add_cors_http_header() {
     header("Access-Control-Allow-Origin: https://api.dataengineerhub.blog");
     header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
     header("Access-Control-Allow-Headers: Content-Type, Authorization");
+    
+    // Handle preflight requests
+    if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
+        status_header(200);
+        exit();
+    }
 }
 add_action('init', 'add_cors_http_header');
 
@@ -246,3 +252,25 @@ function add_category_color_to_rest_api() {
     ));
 }
 add_action('rest_api_init', 'add_category_color_to_rest_api');
+
+// Add custom REST API headers for better CORS handling
+function add_cors_headers_to_rest_api() {
+    remove_filter('rest_pre_serve_request', 'rest_send_cors_headers');
+    add_filter('rest_pre_serve_request', function($value) {
+        header('Access-Control-Allow-Origin: https://api.dataengineerhub.blog');
+        header('Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT, DELETE');
+        header('Access-Control-Allow-Headers: Content-Type, Authorization, X-WP-Nonce');
+        header('Access-Control-Allow-Credentials: true');
+        return $value;
+    });
+}
+add_action('rest_api_init', 'add_cors_headers_to_rest_api');
+
+// Ensure proper JSON response for API calls
+function ensure_json_response($response, $server, $request) {
+    if (strpos($request->get_route(), '/wp/v2/') !== false) {
+        header('Content-Type: application/json; charset=utf-8');
+    }
+    return $response;
+}
+add_filter('rest_pre_serve_request', 'ensure_json_response', 10, 3);

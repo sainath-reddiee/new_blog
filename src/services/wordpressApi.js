@@ -1,8 +1,10 @@
-const WORDPRESS_API_URL = 'https://dataengineerhub.blog/wp-json/wp/v2';
+import { WORDPRESS_API_URL, API_ENDPOINTS } from '@/apiConfig';
+
+const WP_API_BASE = `${WORDPRESS_API_URL}/wp-json/wp/v2`;
 
 class WordPressAPI {
   constructor() {
-    this.baseURL = WORDPRESS_API_URL;
+    this.baseURL = WP_API_BASE;
     this.cache = new Map();
     this.cacheTimeout = 5 * 60 * 1000; // 5 minutes
   }
